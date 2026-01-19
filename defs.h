@@ -121,6 +121,7 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 void            procdump_ps(void);
+int             setnice(struct proc *p,int value);
 // swtch.S
 void            swtch(struct context**, struct context*);
 

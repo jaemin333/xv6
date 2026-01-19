@@ -197,6 +197,7 @@ fork(void)
   // child process inherits the nice value of the parent process
   np->nice = curproc->nice;
 
+
   // Copy process state from proc.
   if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
     kfree(np->kstack);
@@ -365,7 +366,6 @@ scheduler(void)
   }
 }
 
-*/
 
 
 // Objective 1: Priority Scheduler
@@ -375,7 +375,6 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-
   for(;;){
     sti();
     acquire(&ptable.lock);
@@ -412,9 +411,7 @@ scheduler(void)
     release(&ptable.lock);
   }
 }
-
-
-/*
+*/
 
 //Objective 2: MLFQ Scheduler
 void
@@ -453,7 +450,6 @@ scheduler(void){
   }
 
 }
-*/
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
@@ -481,6 +477,19 @@ sched(void)
   mycpu()->intena = intena;
 }
 
+int
+setnice(struct proc *p,int value){
+  acquire(&ptable.lock);
+
+  p->nice +=value;
+
+  if(p->nice <-5) p->nice = -5;
+  if(p->nice > 4) p->nice = 4;
+
+  release(&ptable.lock);
+
+  return p->nice;
+}
 
 // Give up the CPU for one scheduling round.
 void
@@ -544,6 +553,10 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
+
+  if(p->time_slice > 0){
+    p->time_slice = 4;
+  }
 
   sched();
 
@@ -644,13 +657,13 @@ procdump_ps(void){
   struct proc *p;
   extern uint ticks;
 
-  cprintf("name\tpid\tstate\tnice\tticks\tticks: %d\n",ticks);
+  cprintf("name\tpid\tstate\tprior\tticks: %d\n",ticks);
 
   acquire(&ptable.lock);
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == SLEEPING || p->state == RUNNABLE || p->state == RUNNING || p->state == ZOMBIE){
-      cprintf("%s\t%d\t%d\t%d\t%d\n", p->name, p->pid, p->state, p->nice, p->ticks);
+      cprintf("%s\t%d\t%d\t%d\t%d\n", p->name, p->pid, p->state, p->priority, p->ticks);
     }
   }
 

@@ -94,21 +94,13 @@ int
 sys_nice(void)
 {
   int value;
-  struct proc *curp = myproc();
 
   if(argint(0,&value) < 0) return -1;
 
-  curp->nice +=value;
-
-  if(curp->nice < -5){
-    curp->nice = -5;
-  }
-  if(curp->nice > 4){
-    curp->nice = 4;
-  }
+  int new_nice = setnice(myproc(),value);
 
   yield();
-  return curp->nice;
+  return new_nice;
 }
 
 int

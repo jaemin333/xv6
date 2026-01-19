@@ -56,16 +56,18 @@ trap(struct trapframe *tf)
     }
     if(myproc() && myproc()->state == RUNNING){
       myproc()->ticks++; 
-
       myproc()->time_slice--;
 
-      /*
       if(myproc()->time_slice <=0){
-        if(myproc()->priority < 2)  myproc()->priority++;
+
+        if(myproc()->priority < 2){
+          myproc()->priority++;
+        }  
+        
         myproc()->time_slice = 4;
+
         yield();
       }
-      */
       
     }
     lapiceoi();
