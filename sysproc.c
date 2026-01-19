@@ -107,6 +107,7 @@ sys_nice(void)
     curp->nice = 4;
   }
 
+  yield();
   return curp->nice;
 }
 

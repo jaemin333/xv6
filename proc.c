@@ -90,6 +90,8 @@ found:
   p->pid = nextpid++;
   p->nice = 2;
   p->ticks = 0;
+  p->priority = 0;
+  p->time_slice = 4;
 
   release(&ptable.lock);
 
@@ -325,6 +327,8 @@ wait(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
+
+/*
 void
 scheduler(void)
 {
@@ -361,6 +365,96 @@ scheduler(void)
   }
 }
 
+*/
+
+
+// Objective 1: Priority Scheduler
+void
+scheduler(void)
+{
+  struct proc *p;
+  struct cpu *c = mycpu();
+  c->proc = 0;
+
+  for(;;){
+    sti();
+    acquire(&ptable.lock);
+
+    struct proc *highest_p = 0;
+
+    for(p = ptable.proc; p<&ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE) continue;
+
+      if(highest_p == 0){
+        highest_p = p;
+        continue;
+      }
+      
+      if(p->nice < highest_p->nice){
+        highest_p = p;
+      }
+      else if(p->nice == highest_p->nice && p->pid < highest_p->pid){
+        highest_p = p;
+      }
+    }
+
+    if(highest_p != 0){
+      p = highest_p;
+      c->proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+
+      swtch(&(c->scheduler), p->context);
+      switchkvm();
+
+      c->proc = 0;
+    }
+    release(&ptable.lock);
+  }
+}
+
+
+/*
+
+//Objective 2: MLFQ Scheduler
+void
+scheduler(void){
+  struct proc *p;
+  struct cpu *c = mycpu();
+  c->proc = 0;
+
+  for(;;){
+    sti();
+    acquire(&ptable.lock);
+
+    struct proc *target = 0;
+
+    for(int q=0; q<3; q++){
+      for(p=ptable.proc; p<&ptable.proc[NPROC]; p++){
+        if(p->state != RUNNABLE || p->priority != q) continue;
+
+        target = p;
+        goto found;
+      }
+    }
+
+    found:
+    if(target){
+      p=target;
+      c->proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+
+      swtch(&(c->scheduler), p->context);
+      switchkvm();
+      c->proc = 0;
+    }
+    release(&ptable.lock);
+  }
+
+}
+*/
+
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
 // intena because intena is a property of this
@@ -387,12 +481,18 @@ sched(void)
   mycpu()->intena = intena;
 }
 
+
 // Give up the CPU for one scheduling round.
 void
 yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
+
+  if(myproc()->time_slice > 0){
+    myproc()->time_slice = 4; 
+  }
+
   sched();
   release(&ptable.lock);
 }
