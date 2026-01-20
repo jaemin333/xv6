@@ -28,6 +28,8 @@ int swapwrite(const char*, int);
 int yield(void);
 int nice(int);
 int ps(void);
+void *mmap(int fd, int offset, int length, int flags);
+int munmap(void* addr, int length);
 
 // ulib.c
 int stat(const char*, struct stat*);

@@ -6,6 +6,13 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "sleeplock.h"
+#include "fs.h"
+#include "file.h"
+
+#ifndef PTE_D
+#define PTE_D 0x040
+#endif
 
 struct {
   struct spinlock lock;
@@ -19,6 +26,9 @@ extern void forkret(void);
 extern void trapret(void);
 
 static void wakeup1(void *chan);
+
+struct spinlock mmap_lock;
+int global_mmap_count = 0;
 
 void
 pinit(void)
@@ -237,11 +247,18 @@ void
 exit(void)
 {
   struct proc *curproc = myproc();
-  struct proc *p;
+  struct proc *p = myproc();
   int fd;
 
   if(curproc == initproc)
     panic("init exiting");
+
+
+  for(int i=0; i<4; i++){
+    if(p->mmaps[i].used){
+      munmap(p->mmaps[i].addr, p->mmaps[i].length);
+    }
+  }
 
   // Close all open files.
   for(fd = 0; fd < NOFILE; fd++){
@@ -365,7 +382,7 @@ scheduler(void)
 
   }
 }
-
+*/
 
 
 // Objective 1: Priority Scheduler
@@ -411,7 +428,9 @@ scheduler(void)
     release(&ptable.lock);
   }
 }
-*/
+
+
+/*
 
 //Objective 2: MLFQ Scheduler
 void
@@ -450,6 +469,8 @@ scheduler(void){
   }
 
 }
+
+*/
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
@@ -497,10 +518,6 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
-
-  if(myproc()->time_slice > 0){
-    myproc()->time_slice = 4; 
-  }
 
   sched();
   release(&ptable.lock);
@@ -554,9 +571,8 @@ sleep(void *chan, struct spinlock *lk)
   p->chan = chan;
   p->state = SLEEPING;
 
-  if(p->time_slice > 0){
-    p->time_slice = 4;
-  }
+  
+  p->time_slice = 4;
 
   sched();
 
@@ -657,15 +673,167 @@ procdump_ps(void){
   struct proc *p;
   extern uint ticks;
 
-  cprintf("name\tpid\tstate\tprior\tticks: %d\n",ticks);
+  cprintf("name\tpid\tstate\tnice\tticks: %d\n",ticks);
 
   acquire(&ptable.lock);
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == SLEEPING || p->state == RUNNABLE || p->state == RUNNING || p->state == ZOMBIE){
-      cprintf("%s\t%d\t%d\t%d\t%d\n", p->name, p->pid, p->state, p->priority, p->ticks);
+      cprintf("%s\t%d\t%d\t%d\t%d\n", p->name, p->pid, p->state, p->nice, p->ticks);
     }
   }
 
   release(&ptable.lock);
+}
+
+
+uint
+mmap(int fd, int offset, int length, int flags, struct file *f)
+{
+  struct proc *p = myproc();
+  uint start_addr;
+  int slot = -1;
+
+  if((flags & MAP_PROT_WRITE) && (f->writable == 0)){
+    return (uint)MAP_FAILED;
+  }
+
+  if(offset % PGSIZE != 0) return (uint)MAP_FAILED;
+
+  if(length <= 0) return (uint)MAP_FAILED;
+
+  acquire(&mmap_lock);
+  if(global_mmap_count >= 16){
+    release(&mmap_lock);
+    return (uint)MAP_FAILED;
+  }
+  global_mmap_count++;
+  release(&mmap_lock);
+
+  for(int i=0; i<4; i++){
+    if(p->mmaps[i].used == 0){
+      slot = i;
+      break;
+    }
+  }
+
+  if(slot == -1){
+    acquire(&mmap_lock);
+    global_mmap_count--;
+    release(&mmap_lock);
+    return (uint)MAP_FAILED;
+  }
+
+  // KERNBASE의 반부터 시작
+  start_addr = 0x40000000 + (slot * 0x100000);
+
+  struct mmap_page *m = &p->mmaps[slot];
+  m->used = 1;
+  m->addr = start_addr;
+  m->length = length;
+  m->offset = offset;
+  m->fd = fd;
+  m->f = filedup(f);
+
+  int bytes_left = length;
+  int curr_off = offset;
+  uint curr_addr = start_addr;
+
+  while(bytes_left > 0){
+    char *mem = kalloc();
+    if(mem == 0) goto bad;
+    memset(mem,0,PGSIZE);
+
+    int n = (bytes_left < PGSIZE) ? bytes_left : PGSIZE;
+
+    ilock(f->ip);
+    if(readi(f->ip,(char*)mem, curr_off,n) < 0){
+      iunlock(f->ip);
+      kfree(mem);
+      goto bad;
+    }
+    iunlock(f->ip);
+
+    int perm = PTE_U | PTE_P;
+    if(flags & MAP_PROT_WRITE) perm |= PTE_W;
+
+    if(mappages(p->pgdir, (void*)curr_addr, PGSIZE, V2P(mem),perm) <0){
+      kfree(mem);
+      goto bad;
+    }
+    
+    bytes_left -= PGSIZE;
+    curr_off += PGSIZE;
+    curr_addr += PGSIZE;
+  }
+
+  return start_addr;
+
+  bad:
+    fileclose(m->f);
+    m->used = 0;
+    acquire(&mmap_lock);
+    global_mmap_count--;
+    release(&mmap_lock);
+    return (uint)MAP_FAILED;
+}
+
+uint
+munmap(uint addr, int length)
+{
+  struct proc *p = myproc();
+  struct mmap_page *m = 0;
+
+  if(addr % PGSIZE != 0) return -1;
+
+  for(int i=0; i<4; i++){
+    if(p->mmaps[i].used && p->mmaps[i].addr == addr){
+      m = &p->mmaps[i];
+      break;
+    }
+  }
+
+  if(m == 0) return 0;
+
+  if(m->length != length) return -1;
+
+  uint curr_addr = addr;
+  int bytes_left = length;
+
+  while(bytes_left > 0){
+    pte_t *pte = walkpgdir(p->pgdir, (void*)curr_addr,0);
+
+    if(pte && (*pte & PTE_P)){
+      uint pa = PTE_ADDR(*pte);
+
+      if(*pte & PTE_D){
+        int n = (bytes_left < PGSIZE) ? bytes_left : PGSIZE;
+        int file_off = (curr_addr - m->addr) + m->offset;
+        
+        begin_op();
+        ilock(m->f->ip);
+        writei(m->f->ip, (char*)P2V(pa), file_off,n);
+        iunlock(m->f->ip);
+        end_op();
+      }
+
+      if(pa != 0) kfree((char*)P2V(pa));
+
+      *pte = 0;
+    }
+
+    curr_addr += PGSIZE;
+    bytes_left -= PGSIZE;
+  }
+
+  fileclose(m->f);
+  m->used = 0;
+  m->f = 0;
+
+  acquire(&mmap_lock);
+  global_mmap_count--;
+  release(&mmap_lock);
+
+  return 0;
+
 }

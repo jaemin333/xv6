@@ -12,3 +12,9 @@
 #define NBUF         (MAXOPBLOCKS*3)  // size of disk block cache
 #define FSSIZE       1000  // size of file system in blocks
 
+#define MAX_MMAP_CTX  16 // maximum mmaped areas in a system
+#define MAX_MMAP_PROC 4  // maximum mmaped areas in a process
+
+#define MAP_FAILED    ((void *) -1)
+#define MAP_PROT_READ 0x1
+#define MAP_PROT_WRITE 0x2

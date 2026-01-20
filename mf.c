@@ -20,23 +20,19 @@ int main(void) {
   }
 
   // 2. Interactive 프로세스 (Child 2)
-// 2. Interactive 프로세스 (Child 2)
   if (fork() == 0) {
     printf(1, "Child 2 (Interactive, PID %d) started\n", getpid());
-
-    for (int i = 0; i < 50; i++) {
-
-      // ★ 반드시 1~2 tick은 넘기도록 여유 있게
-      for (volatile int j = 0; j < TICK_LOOP * 2; j++);
-
-      // ★ tick 증가 이후에 sleep
-      sleep(2);   // 1도 가능하지만 2가 더 안정적
+    for (int i = 0; i < 100; i++) {
+      // [수정] TICK_LOOP * 3 정도로 설정하여 확실히 2~3틱을 소모하게 함
+      // 타임 슬라이스인 4틱을 넘지 않으므로 Prior 0을 유지해야 합니다.
+      for (volatile int j = 0; j < TICK_LOOP * 10; j++); 
+      
+      // 계산 후 짧게 sleep하여 CPU 양보 및 타임 슬라이스 초기화
+      sleep(1); 
     }
-
     printf(1, "Child 2 finished\n");
     exit();
   }
-
 
   // 3. 부모 프로세스: 모니터링
   printf(1, "\n--- Observation: Initial ---\n");

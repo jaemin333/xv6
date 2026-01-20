@@ -32,6 +32,17 @@ struct context {
   uint eip;
 };
 
+struct mmap_page{
+  int used;
+  uint addr; // start address
+  int length;
+  int offset;
+  int prot;
+  int flags;
+  int fd;
+  struct file *f;
+};
+
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -53,7 +64,12 @@ struct proc {
   uint ticks;
   int priority; // 0: high, 1:medium 2:low
   int time_slice;
+
+  struct mmap_page mmaps[MAX_MMAP_PROC];
 };
+
+
+
 
 // Process memory is laid out contiguously, low addresses first:
 //   text

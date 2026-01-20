@@ -47,30 +47,33 @@ trap(struct trapframe *tf)
   }
 
   switch(tf->trapno){
+  // kernel/trap.c
   case T_IRQ0 + IRQ_TIMER:
+    lapiceoi();
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
       wakeup(&ticks);
       release(&tickslock);
     }
+
     if(myproc() && myproc()->state == RUNNING){
       myproc()->ticks++; 
       myproc()->time_slice--;
-
-      if(myproc()->time_slice <=0){
-
+      // 1. 타임 슬라이스를 다 썼다면 강등시키고 양보
+      if(myproc()->time_slice <= 0){
         if(myproc()->priority < 2){
           myproc()->priority++;
         }  
-        
-        myproc()->time_slice = 4;
-
+        myproc()->time_slice = 4; // 초기화
         yield();
+      } 
+      // 2. 슬라이스가 남았더라도 매 틱마다 무조건 yield를 시도
+      else {
+        //yield();
+        //in priority scheduler, dont use yield
       }
-      
     }
-    lapiceoi();
     break;
   case T_IRQ0 + IRQ_IDE:
     ideintr();
@@ -122,11 +125,6 @@ trap(struct trapframe *tf)
 
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
-  if(myproc() && myproc()->state == RUNNING &&
-     tf->trapno == T_IRQ0+IRQ_TIMER){
-      //yield();
-     }
-
 
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)

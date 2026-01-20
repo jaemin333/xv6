@@ -121,9 +121,12 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 void            procdump_ps(void);
+uint            munmap(uint, int);
+uint            mmap(int,int,int,int,struct file*);
 int             setnice(struct proc *p,int value);
 // swtch.S
 void            swtch(struct context**, struct context*);
+
 
 // spinlock.c
 void            acquire(struct spinlock*);
@@ -186,10 +189,13 @@ void            switchuvm(struct proc*);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
+uint*           walkpgdir(pde_t*, const void*, int);
+int             mappages(pde_t *, void *, uint, uint, int);
 
 // swap.c
 void swapread(char* ptr, int blkno);
 void swapwrite(char* ptr, int blkno);
 
+int argfd(int, int*, struct file**);
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

@@ -18,7 +18,7 @@
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
-static int
+int
 argfd(int n, int *pfd, struct file **pf)
 {
   int fd;
@@ -95,10 +95,18 @@ sys_close(void)
 {
   int fd;
   struct file *f;
+  struct proc *p = myproc();
 
   if(argfd(0, &fd, &f) < 0)
     return -1;
-  myproc()->ofile[fd] = 0;
+
+  for(int i=0; i<4; i++){
+    if(p->mmaps[i].used && p->mmaps[i].fd == fd){
+      munmap(p->mmaps[i].addr, p->mmaps[i].length);
+    }
+  }
+  
+  p->ofile[fd] = 0;
   fileclose(f);
   return 0;
 }
@@ -466,3 +474,4 @@ int sys_swapwrite(void)
 	swapwrite(ptr, blkno);
 	return 0;
 }
+

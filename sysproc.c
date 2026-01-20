@@ -99,7 +99,7 @@ sys_nice(void)
 
   int new_nice = setnice(myproc(),value);
 
-  yield();
+  yield(); //for prioirty scheduler
   return new_nice;
 }
 
@@ -114,4 +114,30 @@ int
 sys_ps(void){
   procdump_ps();
   return 0;
+}
+
+uint
+sys_mmap(void){
+  int fd, offset, length, flags;
+  struct file *f;
+
+  if(argfd(0,&fd,&f) < 0) return (uint)MAP_FAILED;
+  if(argint(1,&offset) < 0) return (uint)MAP_FAILED;
+  if(argint(2,&length) < 0) return (uint)MAP_FAILED;
+  if(argint(3,&flags) < 0) return (uint)MAP_FAILED;
+
+  return mmap(fd,offset,length,flags,f);
+}
+
+uint
+sys_munmap(void)
+{
+  uint addr;
+  int length;
+
+  if(argint(0,(int*)&addr) < 0) return -1;
+  if(argint(1,&length) < 0) return -1;
+
+  return munmap(addr,length);
+
 }
