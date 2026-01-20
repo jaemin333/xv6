@@ -7,6 +7,10 @@
 #include "x86.h"
 #include "traps.h"
 #include "spinlock.h"
+#include "sleeplock.h"
+#include "fs.h"
+#include "file.h"
+#include "fcntl.h"
 
 // Interrupt descriptor table (shared by all CPUs).
 struct gatedesc idt[256];
@@ -44,6 +48,76 @@ trap(struct trapframe *tf)
     if(myproc()->killed)
       exit();
     return;
+  }
+  else if(tf->trapno == T_PGFLT){
+    struct proc *p = myproc();
+    uint va = rcr2(); // cr2 register contains a faulted virtual address
+
+    if(va >= KERNBASE){
+      p->killed = 1;
+      return;
+    }
+
+    struct mmap_page *m = 0;
+    for(int i=0; i<4; i++){
+      if(p->mmaps[i].used && va >= p->mmaps[i].addr && va < p->mmaps[i].addr + p->mmaps[i].length){
+        m = &p->mmaps[i];
+        break;
+      }
+    }
+
+    if(m){
+      if((tf->err & 2) && !(m->prot & MAP_PROT_WRITE)){
+        cprintf("mmap write protection\n");
+        p->killed = 1;
+        return;
+      }
+
+      char *mem = kalloc();
+      if(mem == 0){
+        p->killed = 1;
+        return;
+      }
+      memset(mem,0,PGSIZE);
+
+      uint va_start = PGROUNDDOWN(va);
+      int offset = (va_start - m->addr) + m->offset;
+      int n = PGSIZE;
+      if(va_start + n > m->addr + m->length)
+        n = (m->addr + m->length) - va_start;
+
+      ilock(m->f->ip);
+      readi(m->f->ip, mem, offset, n); 
+      iunlock(m->f->ip);
+
+      int perm = PTE_U | PTE_P;
+      if(m->prot & MAP_PROT_WRITE) perm |= PTE_W;
+
+      if(mappages(p->pgdir, (void*)va_start, PGSIZE, V2P(mem), perm) < 0){
+        kfree(mem);
+        p->killed = 1;
+      }
+      return; 
+    }
+
+    if(va < p->sz){
+      char *mem = kalloc();
+      if(mem ==0){
+        p->killed = 1;
+        return;
+      }
+      memset(mem,0,PGSIZE);
+
+      if(mappages(p->pgdir, (void*)PGROUNDDOWN(va), PGSIZE, V2P(mem), PTE_W|PTE_U|PTE_P) < 0){
+        kfree(mem);
+        p->killed = 1;
+      }
+
+      return;
+    }
+
+      
+
   }
 
   switch(tf->trapno){

@@ -735,6 +735,7 @@ mmap(int fd, int offset, int length, int flags, struct file *f)
   m->fd = fd;
   m->f = filedup(f);
 
+  /* //objective 2
   int bytes_left = length;
   int curr_off = offset;
   uint curr_addr = start_addr;
@@ -767,8 +768,11 @@ mmap(int fd, int offset, int length, int flags, struct file *f)
     curr_addr += PGSIZE;
   }
 
+  */
+
   return start_addr;
 
+  /*
   bad:
     fileclose(m->f);
     m->used = 0;
@@ -776,6 +780,7 @@ mmap(int fd, int offset, int length, int flags, struct file *f)
     global_mmap_count--;
     release(&mmap_lock);
     return (uint)MAP_FAILED;
+  */
 }
 
 uint

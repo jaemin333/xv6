@@ -30,6 +30,7 @@ int nice(int);
 int ps(void);
 void *mmap(int fd, int offset, int length, int flags);
 int munmap(void* addr, int length);
+int baddr(void);
 
 // ulib.c
 int stat(const char*, struct stat*);

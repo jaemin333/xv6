@@ -108,6 +108,7 @@ extern int sys_swapwrite(void);
 extern int sys_nice(void);
 extern int sys_yield(void);
 extern int sys_ps(void);
+extern int sys_baddr(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -136,6 +137,7 @@ static int (*syscalls[])(void) = {
 [SYS_nice]      sys_nice,
 [SYS_yield]     sys_yield,
 [SYS_ps]        sys_ps,
+[SYS_baddr]   sys_baddr,
 };
 
 void

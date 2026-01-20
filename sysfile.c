@@ -475,3 +475,29 @@ int sys_swapwrite(void)
 	return 0;
 }
 
+int sys_baddr(void)
+{
+  int fd;
+  int offset;
+  struct file *f;
+  struct inode *ip;
+  uint addr;
+
+  if(argfd(0,&fd,&f) < 0 || argint(1,&offset) < 0) return -1;
+  if(f->type != FD_INODE) return -1;
+
+  ip = f->ip;
+  
+  ilock(ip);
+
+  uint bn = offset / BSIZE;
+  
+  addr = bmap_peek(ip,bn);
+
+  iunlock(ip);
+
+  if(addr == 0) return -1;
+
+  return addr;
+}
+
