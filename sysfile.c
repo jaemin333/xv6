@@ -490,9 +490,8 @@ int sys_baddr(void)
   
   ilock(ip);
 
-  uint bn = offset / BSIZE;
-  
-  addr = bmap_peek(ip,bn);
+  uint bn = offset / BSIZE;  
+  addr = bmap_addr(ip,bn);
 
   iunlock(ip);
 

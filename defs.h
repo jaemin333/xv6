@@ -53,7 +53,7 @@ struct inode*   nameiparent(char*, char*);
 int             readi(struct inode*, char*, uint, uint);
 void            stati(struct inode*, struct stat*);
 int             writei(struct inode*, char*, uint, uint);
-uint            bmap_peek(struct inode *, uint);
+uint            bmap_addr(struct inode *, uint);
 
 // ide.c
 void            ideinit(void);
@@ -126,6 +126,8 @@ void            procdump_ps(void);
 uint            munmap(uint, int);
 uint            mmap(int,int,int,int,struct file*);
 int             setnice(struct proc *p,int value);
+int             clone(void *);
+int             join(void);
 // swtch.S
 void            swtch(struct context**, struct context*);
 

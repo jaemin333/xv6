@@ -109,6 +109,8 @@ extern int sys_nice(void);
 extern int sys_yield(void);
 extern int sys_ps(void);
 extern int sys_baddr(void);
+extern int sys_clone(void);
+extern int sys_join(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -138,6 +140,8 @@ static int (*syscalls[])(void) = {
 [SYS_yield]     sys_yield,
 [SYS_ps]        sys_ps,
 [SYS_baddr]   sys_baddr,
+[SYS_clone]   sys_clone,
+[SYS_join]    sys_join,
 };
 
 void

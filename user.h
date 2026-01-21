@@ -31,7 +31,8 @@ int ps(void);
 void *mmap(int fd, int offset, int length, int flags);
 int munmap(void* addr, int length);
 int baddr(void);
-
+int clone(void*);
+int join(void);
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);

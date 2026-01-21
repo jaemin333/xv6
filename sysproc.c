@@ -146,3 +146,19 @@ sys_munmap(void)
   return munmap(addr,length);
 
 }
+
+int
+sys_clone(void)
+{
+  void* stack;
+
+  if(argptr(0,(char**)&stack,sizeof(void*)) <0) return -1;
+
+  return clone(stack);
+}
+
+int
+sys_join(void)
+{
+  return join();
+}

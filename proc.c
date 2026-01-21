@@ -199,6 +199,9 @@ fork(void)
   struct proc *np;
   struct proc *curproc = myproc();
 
+  //PA4 
+  if(curproc->is_thread == 1) return -1;
+
   // Allocate process.
   if((np = allocproc()) == 0){
     return -1;
@@ -231,6 +234,10 @@ fork(void)
 
   pid = np->pid;
 
+  //PA4
+  np->tid = np->pid;
+  np->is_thread = 0;
+
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
@@ -238,6 +245,54 @@ fork(void)
   release(&ptable.lock);
 
   return pid;
+}
+
+int
+clone(void *stack)
+{
+  struct proc *np;
+  struct proc *curproc = myproc();
+
+  if((uint)stack % 4096 !=0) return -1;
+
+  if((np = allocproc()) == 0 ) return -1;
+
+  np->pgdir = curproc->pgdir;
+  np->sz = curproc->sz;
+
+  *np->tf = *curproc->tf;
+
+  //stack allocation, copy the caller's stack to the new thread's stack
+  uint user_src_stack = (curproc->tf->esp) & ~0XFFF;
+  uint offset = (uint)stack - user_src_stack;
+
+  memmove(stack,(void*)user_src_stack,4096);
+  np->tf->esp = curproc->tf->esp + offset;
+  np->tf->ebp = curproc->tf->ebp + offset;
+
+  for(int i=0; i< NOFILE; i++){
+    if(curproc->ofile[i]){
+      np->ofile[i] = filedup(curproc->ofile[i]);
+    }
+  }
+
+  np->cwd = idup(curproc->cwd);
+  safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+
+  np->tid = np->pid;
+  np->pid = curproc->pid;
+
+  np->is_thread = 1;
+  np->parent = curproc;
+
+  np->tf->eax = 0;
+
+  acquire(&ptable.lock);
+  np->state = RUNNABLE;
+  release(&ptable.lock);
+
+  return np->tid;
+
 }
 
 // Exit the current process.  Does not return.
@@ -254,24 +309,26 @@ exit(void)
     panic("init exiting");
 
 
-  for(int i=0; i<4; i++){
-    if(p->mmaps[i].used){
-      munmap(p->mmaps[i].addr, p->mmaps[i].length);
+  if(curproc->is_thread == 0){
+    for(int i=0; i<4; i++){
+      if(p->mmaps[i].used){
+        munmap(p->mmaps[i].addr, p->mmaps[i].length);
+      }
     }
-  }
 
-  // Close all open files.
-  for(fd = 0; fd < NOFILE; fd++){
-    if(curproc->ofile[fd]){
-      fileclose(curproc->ofile[fd]);
-      curproc->ofile[fd] = 0;
+    // Close all open files.
+    for(fd = 0; fd < NOFILE; fd++){
+      if(curproc->ofile[fd]){
+        fileclose(curproc->ofile[fd]);
+        curproc->ofile[fd] = 0;
+      }
     }
-  }
 
-  begin_op();
-  iput(curproc->cwd);
-  end_op();
-  curproc->cwd = 0;
+    begin_op();
+    iput(curproc->cwd);
+    end_op();
+    curproc->cwd = 0;
+  }
 
   acquire(&ptable.lock);
 
@@ -315,7 +372,9 @@ wait(void)
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
-        freevm(p->pgdir);
+        if(p->is_thread == 0){
+          freevm(p->pgdir);
+        }
         p->pid = 0;
         p->parent = 0;
         p->name[0] = 0;
@@ -334,6 +393,48 @@ wait(void)
 
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
+  }
+}
+
+int
+join(void)
+{
+  struct proc *p;
+  int havekids, pid;
+
+  struct proc *curproc = myproc();
+
+  if(curproc->is_thread == 1) return -1;
+
+  acquire(&ptable.lock);
+  for(;;){
+    havekids = 0;
+    for(p = ptable.proc; p<&ptable.proc[NPROC]; p++){
+      if(p->parent != curproc || p->is_thread != 1) continue;
+      havekids = 1;
+
+      if(p->state == ZOMBIE){
+        pid = p->tid;
+        kfree(p->kstack);
+        p->kstack = 0;
+
+        p->pgdir = 0; //different with wait
+        p->pid = 0;
+        p->parent = 0;
+        p->killed = 0;
+        p->state = UNUSED;
+        
+        release(&ptable.lock);
+        return pid;
+      }
+    }
+
+    if(!havekids || curproc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+
+    sleep(curproc,&ptable.lock);
   }
 }
 

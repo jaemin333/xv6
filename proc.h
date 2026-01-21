@@ -66,6 +66,11 @@ struct proc {
   int time_slice;
 
   struct mmap_page mmaps[MAX_MMAP_PROC];
+
+  //PA4
+  int tid;
+  int is_thread;
+  
 };
 
 
