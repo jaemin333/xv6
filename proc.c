@@ -259,7 +259,6 @@ clone(void *stack)
 
   np->pgdir = curproc->pgdir;
   np->sz = curproc->sz;
-
   *np->tf = *curproc->tf;
 
   //stack allocation, copy the caller's stack to the new thread's stack
@@ -486,6 +485,7 @@ scheduler(void)
 */
 
 
+/*
 // Objective 1: Priority Scheduler
 void
 scheduler(void)
@@ -501,12 +501,10 @@ scheduler(void)
 
     for(p = ptable.proc; p<&ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE) continue;
-
       if(highest_p == 0){
         highest_p = p;
         continue;
       }
-      
       if(p->nice < highest_p->nice){
         highest_p = p;
       }
@@ -529,9 +527,8 @@ scheduler(void)
     release(&ptable.lock);
   }
 }
+*/
 
-
-/*
 
 //Objective 2: MLFQ Scheduler
 void
@@ -544,34 +541,30 @@ scheduler(void){
     sti();
     acquire(&ptable.lock);
 
-    struct proc *target = 0;
 
     for(int q=0; q<3; q++){
+      int found_proc_in_this_queue = 0;
       for(p=ptable.proc; p<&ptable.proc[NPROC]; p++){
         if(p->state != RUNNABLE || p->priority != q) continue;
 
-        target = p;
-        goto found;
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+        c->proc = 0;
+        found_proc_in_this_queue = 1;
       }
-    }
-
-    found:
-    if(target){
-      p=target;
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
-      c->proc = 0;
+      if(found_proc_in_this_queue){
+        q = -1;
+      }
     }
     release(&ptable.lock);
   }
 
 }
 
-*/
+
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
@@ -774,13 +767,13 @@ procdump_ps(void){
   struct proc *p;
   extern uint ticks;
 
-  cprintf("name\tpid\tstate\tnice\tticks: %d\n",ticks);
+  cprintf("name\tpid\tstate\tprior\tticks: %d\n",ticks);
 
   acquire(&ptable.lock);
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == SLEEPING || p->state == RUNNABLE || p->state == RUNNING || p->state == ZOMBIE){
-      cprintf("%s\t%d\t%d\t%d\t%d\n", p->name, p->pid, p->state, p->nice, p->ticks);
+      cprintf("%s\t%d\t%d\t%d\t%d\n", p->name, p->pid, p->state, p->priority, p->ticks);
     }
   }
 
@@ -942,4 +935,32 @@ munmap(uint addr, int length)
 
   return 0;
 
+}
+
+int mutex_lock(void* l)
+{
+  acquire(&ptable.lock);
+
+  while(*(int*)l != 0){
+    sleep(l,&ptable.lock);
+  }
+
+  *(int*)l = 1;
+
+  release(&ptable.lock);
+
+  return 0;
+}
+
+int
+mutex_unlock(void *l)
+{
+  acquire(&ptable.lock);
+
+  *(int*)l = 0;
+  wakeup1(l);
+
+  release(&ptable.lock);
+
+  return 0;
 }

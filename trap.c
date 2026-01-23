@@ -144,7 +144,7 @@ trap(struct trapframe *tf)
       } 
       // 2. 슬라이스가 남았더라도 매 틱마다 무조건 yield를 시도
       else {
-        //yield();
+        yield();
         //in priority scheduler, dont use yield
       }
     }

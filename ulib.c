@@ -117,18 +117,22 @@ int thread_create(void (*func)(void *), void *arg)
   void *orig_stack = malloc(4096*2);
   void *aligned_stack;
 
-  if(orig_stack == 0) return -1;
+  if(orig_stack == 0){
+    printf(1, "DEBUG: malloc failed!\n"); // <--- 추가
+    return -1;
+  }
 
   uint addr = (uint)orig_stack;
 
   if(addr % 4096 !=0){
-    addr = (addr+4096) & ~0xFF;
+    addr = (addr+4096) & ~0xFFF;
   }
   aligned_stack = (void*)addr;
 
-  int tid = clone(orig_stack);
+  int tid = clone(aligned_stack);
 
-  if(tid< 0){
+  if(tid < 0){
+    printf(1, "DEBUG: clone syscall failed! stack=%p\n", aligned_stack); // <--- 추가
     free(orig_stack);
     return -1;
   }

@@ -33,6 +33,8 @@ int munmap(void* addr, int length);
 int baddr(void);
 int clone(void*);
 int join(void);
+int mutex_lock(int*);
+int mutex_unlock(int*);
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);
@@ -46,3 +48,5 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+int thread_create(void(*)(void *), void *);
+int thread_join(int);

@@ -150,9 +150,9 @@ sys_munmap(void)
 int
 sys_clone(void)
 {
-  void* stack;
+  void *stack;
 
-  if(argptr(0,(char**)&stack,sizeof(void*)) <0) return -1;
+  if(argptr(0,(char**)&stack,0) <0) return -1;
 
   return clone(stack);
 }
@@ -161,4 +161,24 @@ int
 sys_join(void)
 {
   return join();
+}
+
+int
+sys_mutex_lock(void)
+{
+  void *l;
+
+  if(argptr(0,(char**)&l, sizeof(int) < 0)) return -1;
+
+  return mutex_lock(l);
+}
+
+int
+sys_mutex_unlock(void)
+{
+  void *l;
+
+  if(argptr(0,(char**)&l, sizeof(int) < 0)) return -1;
+
+  return mutex_unlock(l);
 }

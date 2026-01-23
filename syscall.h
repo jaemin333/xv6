@@ -30,3 +30,5 @@
 #define SYS_baddr  29
 #define SYS_clone  30
 #define SYS_join   31
+#define SYS_mutex_lock 32
+#define SYS_mutex_unlock 33

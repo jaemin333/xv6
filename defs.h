@@ -128,6 +128,9 @@ uint            mmap(int,int,int,int,struct file*);
 int             setnice(struct proc *p,int value);
 int             clone(void *);
 int             join(void);
+int             mutex_lock(void*);
+int             mutex_unlock(void*);
+
 // swtch.S
 void            swtch(struct context**, struct context*);
 

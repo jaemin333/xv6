@@ -25,6 +25,7 @@ int main(int argc, char** argv)
 	int tid1, tid2;
 	tid1 = thread_create(thread_main, 0);
 	tid2 = thread_create(thread_main, 0);
+	printf(1, "Created threads: tid1=%d, tid2=%d\n", tid1, tid2);
 
 	thread_join(tid1);
 	thread_join(tid2);
