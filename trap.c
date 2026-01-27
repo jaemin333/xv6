@@ -83,8 +83,7 @@ trap(struct trapframe *tf)
       uint va_start = PGROUNDDOWN(va);
       int offset = (va_start - m->addr) + m->offset;
       int n = PGSIZE;
-      if(va_start + n > m->addr + m->length)
-        n = (m->addr + m->length) - va_start;
+      if(va_start + n > m->addr + m->length) n = (m->addr + m->length) - va_start;
 
       ilock(m->f->ip);
       readi(m->f->ip, mem, offset, n); 
@@ -99,6 +98,12 @@ trap(struct trapframe *tf)
       }
       return; 
     }
+
+    if(tf->err &1){ //p bit t-err는 페이지는 있지만 권한문제
+      p->killed = 1;
+      return;
+    }
+
 
     if(va < p->sz){
       char *mem = kalloc();
@@ -116,7 +121,6 @@ trap(struct trapframe *tf)
       return;
     }
 
-      
 
   }
 

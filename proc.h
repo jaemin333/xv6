@@ -38,7 +38,6 @@ struct mmap_page{
   int length;
   int offset;
   int prot;
-  int flags;
   int fd;
   struct file *f;
 };

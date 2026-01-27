@@ -18,3 +18,5 @@
 #define MAP_FAILED    ((void *) -1)
 #define MAP_PROT_READ 0x1
 #define MAP_PROT_WRITE 0x2
+
+#define MAX_STACK_SIZE 4096*4

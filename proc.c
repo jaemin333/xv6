@@ -791,9 +791,7 @@ mmap(int fd, int offset, int length, int flags, struct file *f)
   if((flags & MAP_PROT_WRITE) && (f->writable == 0)){
     return (uint)MAP_FAILED;
   }
-
   if(offset % PGSIZE != 0) return (uint)MAP_FAILED;
-
   if(length <= 0) return (uint)MAP_FAILED;
 
   acquire(&mmap_lock);
@@ -827,9 +825,11 @@ mmap(int fd, int offset, int length, int flags, struct file *f)
   m->length = length;
   m->offset = offset;
   m->fd = fd;
+  m->prot = flags;
   m->f = filedup(f);
 
-  /* //objective 2
+  /*
+  //objective 2
   int bytes_left = length;
   int curr_off = offset;
   uint curr_addr = start_addr;
@@ -861,8 +861,8 @@ mmap(int fd, int offset, int length, int flags, struct file *f)
     curr_off += PGSIZE;
     curr_addr += PGSIZE;
   }
-
   */
+  
 
   return start_addr;
 

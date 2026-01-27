@@ -113,6 +113,8 @@ extern int sys_clone(void);
 extern int sys_join(void);
 extern int sys_mutex_lock(void);
 extern int sys_mutex_unlock(void);
+extern int sys_mmap(void);
+extern int sys_munmap(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -146,6 +148,8 @@ static int (*syscalls[])(void) = {
 [SYS_join]    sys_join,
 [SYS_mutex_lock] sys_mutex_lock,
 [SYS_mutex_unlock] sys_mutex_unlock,
+[SYS_mmap]    sys_mmap,
+[SYS_munmap]  sys_munmap,
 };
 
 void
