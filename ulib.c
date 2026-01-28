@@ -118,7 +118,7 @@ int thread_create(void (*func)(void *), void *arg)
   void *aligned_stack;
 
   if(orig_stack == 0){
-    printf(1, "DEBUG: malloc failed!\n"); // <--- 추가
+    printf(1, "DEBUG: malloc failed!\n"); 
     return -1;
   }
 
@@ -132,7 +132,7 @@ int thread_create(void (*func)(void *), void *arg)
   int tid = clone(aligned_stack);
 
   if(tid < 0){
-    printf(1, "DEBUG: clone syscall failed! stack=%p\n", aligned_stack); // <--- 추가
+    printf(1, "DEBUG: clone syscall failed! stack=%p\n", aligned_stack);
     free(orig_stack);
     return -1;
   }
@@ -140,9 +140,7 @@ int thread_create(void (*func)(void *), void *arg)
   // only child thread execute fuc
   if(tid == 0){
     func(arg);
-
     free(orig_stack);
-
     exit();
   }
 

@@ -196,6 +196,8 @@ UPROGS=\
 	_threadtest3\
 	_demand_test\
 	_mmap_test\
+	_mlfq_test\
+	_mlfq_long_test\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

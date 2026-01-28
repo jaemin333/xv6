@@ -254,7 +254,6 @@ clone(void *stack)
   struct proc *curproc = myproc();
 
   if((uint)stack % 4096 !=0) return -1;
-
   if((np = allocproc()) == 0 ) return -1;
 
   np->pgdir = curproc->pgdir;
@@ -262,7 +261,7 @@ clone(void *stack)
   *np->tf = *curproc->tf;
 
   //stack allocation, copy the caller's stack to the new thread's stack
-  uint user_src_stack = (curproc->tf->esp) & ~0XFFF;
+  uint user_src_stack = (curproc->tf->esp) & ~0XFFF; //부모 스택의 시작페이지
   uint offset = (uint)stack - user_src_stack;
 
   memmove(stack,(void*)user_src_stack,4096);
@@ -644,10 +643,8 @@ void
 sleep(void *chan, struct spinlock *lk)
 {
   struct proc *p = myproc();
-  
   if(p == 0)
     panic("sleep");
-
   if(lk == 0)
     panic("sleep without lk");
 
@@ -664,12 +661,10 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
-
-  
   p->time_slice = 4;
 
   sched();
-
+  //이 줄부터 wakeup
   // Tidy up.
   p->chan = 0;
 
@@ -828,7 +823,7 @@ mmap(int fd, int offset, int length, int flags, struct file *f)
   m->prot = flags;
   m->f = filedup(f);
 
-  /*
+  
   //objective 2
   int bytes_left = length;
   int curr_off = offset;
@@ -861,12 +856,12 @@ mmap(int fd, int offset, int length, int flags, struct file *f)
     curr_off += PGSIZE;
     curr_addr += PGSIZE;
   }
-  */
+  
   
 
   return start_addr;
 
-  /*
+  
   bad:
     fileclose(m->f);
     m->used = 0;
@@ -874,7 +869,7 @@ mmap(int fd, int offset, int length, int flags, struct file *f)
     global_mmap_count--;
     release(&mmap_lock);
     return (uint)MAP_FAILED;
-  */
+  
 }
 
 uint
