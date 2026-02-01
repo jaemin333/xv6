@@ -781,7 +781,7 @@ mmap(int fd, int offset, int length, int flags, struct file *f)
 {
   struct proc *p = myproc();
   uint start_addr;
-  int slot = -1;
+  int slot = -1;  
 
   if((flags & MAP_PROT_WRITE) && (f->writable == 0)){
     return (uint)MAP_FAILED;

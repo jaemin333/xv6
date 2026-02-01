@@ -51,7 +51,6 @@ void test_mmap_read() {
     exit();
   }
 
-  // ★ 수정됨: (uint)p -> (void*)p
   // user.h에 정의된 munmap(void* addr, int length)에 맞춤
   if(munmap((void*)p, PGSIZE) < 0) {
       printf(1, "Error: munmap failed\n");
@@ -84,14 +83,13 @@ void test_mmap_protection() {
   }
 }
 
-// [Test 3] 해제 후 접근 테스트
+
 void test_munmap_access() {
   printf(1, "\n[Test 3] munmap Access Test (Should Die)...\n");
 
   int fd = open("mmap_test.txt", O_RDWR);
   char *p = (char*)mmap(fd, 0, PGSIZE, PROT_READ | PROT_WRITE);
   
-  // ★ 수정됨: (uint)p -> (void*)p
   if(munmap((void*)p, PGSIZE) < 0) {
       printf(1, "Error: munmap failed during setup\n");
       exit();
