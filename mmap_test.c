@@ -130,7 +130,6 @@ void test_mmap_writeback() {
 
   p[0] = 'B'; 
   
-  // ★ 수정됨: (uint)p -> (void*)p
   munmap((void*)p, PGSIZE); 
   close(fd);
 
